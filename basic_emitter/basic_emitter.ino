@@ -1,27 +1,52 @@
 
 const int photoDiodePort = 12;
-const int blueDiodePort = 13;
+const int blueDiodePort = 13; //output
 
 const int okLedPort = 3;
 const int failLedPort = 2;
 
-int blinkPeriod = 1;     // in ms
-unsigned long previousMillis = 0;
+
+uint8_t outBit = 0;
+uint8_t outPort = 0; //pas nécéssaire
+
+volatile uint8_t *out = NULL;
+
+
+int blinkPeriod = 1000;     // in µs
+unsigned long previousMicros = micros();
+unsigned long currentMicros;
+
 int ledState = 0;
 
 void setup() {
   pinMode(blueDiodePort, OUTPUT);
   pinMode(okLedPort, OUTPUT);
   pinMode(failLedPort, OUTPUT);
-  blinker(3, failLedPort, 1000); 
+  blinker(3, failLedPort, 1000);
+  
+  
+  outBit = digitalPinToBitMask(blueDiodePort);
+  outPort = digitalPinToPort(blueDiodePort);
+  out = portOutputRegister(outPort); //pourrait remplacer outPort par digitalPintToPort directement....
 }
+
 void loop() {
-  unsigned long currentMillis = millis();
-  if((currentMillis-previousMillis)>blinkPeriod/2) {
-    ledState = 1 - ledState;
-    digitalWrite(blueDiodePort, ledState);
-    previousMillis = currentMillis;
+  currentMicros = micros();
+  
+  if( 2*(currentMicros-previousMicros) > blinkPeriod) {
+    ledState = ~ledState;
+    
+    
+    if (ledState) {
+      *out |= outBit;
+    } 
+    else {
+      *out &= ~outBit;
+    }
+    
+    previousMicros = currentMicros;
   }
+
 }
 
 void blinker(int times, int port, int period){
@@ -32,3 +57,4 @@ void blinker(int times, int port, int period){
     delay(period/2);
   }
 }
+

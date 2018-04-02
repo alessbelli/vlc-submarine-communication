@@ -189,12 +189,14 @@ void checkIfTransmission(float transmissionInfo[4]) {
       }
     }
   }
+  
   if (1.0 * successes/(float)totalTries > 0.5){
     transmissionInfo[0] = 1;
     transmissionInfo[1] = averageInterval;
     transmissionInfo[2] = averageIntervalDeviation;
     transmissionInfo[3] = averageAmplitude;
   }
+  
   for(int i =0; i<4; i++){
     Serial.println(transmissionInfo[i]);
   }
