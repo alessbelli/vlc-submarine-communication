@@ -1,27 +1,97 @@
 #include <LowPower.h>
 
-
+const byte adcPin = 0; // A0
 const int photoDiodePort = 12;
-const int checkDiodePort = 10;
+const int blueDiodePort = 13;
+const int vPlusPort = 11;
+const int okLedPort = 3;
+const int failLedPort = 2;
+
+volatile int adcReading;
+volatile boolean adcDone;
+boolean adcStarted;
 
 void setup() {
- Serial.begin(9600);
-  pinMode(photoDiodePort, OUTPUT);
-  pinMode(checkDiodePort, OUTPUT);
+  pinMode(photoDiodePort, INPUT);
+  pinMode(blueDiodePort, OUTPUT);
+  pinMode(okLedPort, OUTPUT);
+  pinMode(failLedPort, OUTPUT);
+  pinMode(vPlusPort, OUTPUT);
+  digitalWrite(vPlusPort, HIGH);
+  blink(4,okLedPort,200);
+    
+  Serial.begin (115200);
+  ADCSRA =  bit (ADEN);                      // turn ADC on
+//  ADCSRA |= bit (ADPS0);                               //   2  
+//  ADCSRA |= bit (ADPS1);                               //   4  
+  ADCSRA |= bit (ADPS0) | bit (ADPS1);                 //   8  
+//  ADCSRA |= bit (ADPS2);                               //  16 
+//  ADCSRA |= bit (ADPS0) | bit (ADPS2);                 //  32 
+//  ADCSRA |= bit (ADPS1) | bit (ADPS2);                 //  64 
+//  ADCSRA |= bit (ADPS0) | bit (ADPS1) | bit (ADPS2);   // 128
+  ADMUX  =  bit (REFS0) | (adcPin & 0x07);    // AVcc and select input port
+//  ADMUX = bit (REFS0) | bit (REFS1);  // Internal 1.1V reference
+
+  analogReference(INTERNAL);
+  analogRead(adcPin);
+
 }
+
+// ADC complete ISR
+ISR (ADC_vect) {
+  adcReading = ADC;
+  adcDone = true;  
+}  // end of ADC_vect
+  
+int output;
+int timeElapsed;
+long newTime;
+long oldTime;
 void loop() {
-  float transmissionInfo[] = { 0.0, 0.0, 0.0, 0.0 };
-  Serial.println("Begin searching for receiver");
+  //float transmissionInfo[] = { 0.0, 0.0, 0.0, 0.0 };
+  //Serial.println("Begin searching for receiver");
+  /*
   checkIfTransmission(transmissionInfo);
   if (transmissionInfo[0] == 0) {
     goBackToSleep();
   } else {
-    digitalWrite(checkDiodePort, HIGH);
+    digitalWrite(okLedPort, HIGH);
     sendStuff();
-    digitalWrite(checkDiodePort, LOW);
+    digitalWrite(okLedPort, LOW);
     goBackToSleep();
     
-  }
+  }*/
+//    digitalWrite(vPlusPort, HIGH);
+//
+//  output = analogRead(analogPin);
+//  Serial.println(output);
+//  delay(1);
+
+// if last reading finished, process it
+  if (adcDone)
+    {
+    adcStarted = false;
+
+    // do something with the reading, for example, print it
+    newTime=micros();
+    timeElapsed=newTime - oldTime;
+    Serial.println (adcReading);
+//    Serial.println (timeElapsed);
+    timeElapsed=0;
+    oldTime=newTime;
+    
+    // delay (1);
+
+    adcDone = false;
+    }
+    
+  // if we aren't taking a reading, start a new one
+  if (!adcStarted)
+    {
+    adcStarted = true;
+    // start the conversion
+    ADCSRA |= bit (ADSC) | bit (ADIE);
+    }   
 }
 
 /*
@@ -138,11 +208,21 @@ void checkIfTransmission(float transmissionInfo[4]) {
 void goBackToSleep() {
   Serial.println("Going back to sleep");
   // LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF);  // SLEEP_8S also works
+  delay(3000);
   Serial.println("Woke up");
 }
 
 void sendStuff(){
   Serial.println("Sending Stuff...");
   delay(3000);
+}
+
+void blink(int times, int port, int period){
+  for (int i=0; i<times; i++) {
+    digitalWrite(port, HIGH);
+    delay(period/2);
+    digitalWrite(port,LOW);
+    delay(period/2);
+  }
 }
 
