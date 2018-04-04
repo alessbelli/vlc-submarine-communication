@@ -5,6 +5,10 @@ const int blueDiodePort = 13; //output
 const int okLedPort = 3;
 const int failLedPort = 2;
 
+//set to 1 to make leds turn on while the board is sleeping
+#define SLEEPLIGHT 1
+const int sleeptime = 15000; //in miliseconds
+
 uint8_t outBit = 0;
 uint8_t outPort = 0; //pas nécéssaire
 
@@ -145,3 +149,35 @@ void establishContact() {
   }
 }
 
+//makes the board sleep, wake up every 15 secs
+bool sleeping()
+{
+  bool wake = false;
+  while (!wake) /// !digital_read(photoDiodePort) ??? add pinMode for photoDiodePort in setup()
+  {
+    
+#if SLEEPLIGHT //preprocessor
+    digitalWrite(failLedPort, HIGH);  
+    digitalWrite(okLedPort, LOW);  
+#endif    
+    
+    delay (sleeptime);
+    
+#if SLEEPLIGHT
+    digitalWrite(failLedPort, LOW);
+    digitalWrite(okLedPort, HIGH);    
+#endif
+    
+    if () /// digital_read(photoDiodePort)==HIGH ??? add pinMode for photoDiodePort in setup()
+    {
+      wake = true;
+    }
+    
+    // if some other external message, wake = false; break; to 
+  }
+  
+  if (wake)
+    establishContact();
+  
+  return wake;
+}
